@@ -637,6 +637,8 @@ mod wally {
     type size_t = usize;
 
     pub const WALLY_OK: libc::c_int = 0;
+
+    #[link(name = "wallycore")]
     extern "C" {
         //WALLY_CORE_API int bip39_mnemonic_from_bytes(
         //    const struct words *w,
