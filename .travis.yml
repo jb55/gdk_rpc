@@ -3,6 +3,8 @@ sudo: required
 services:
   - docker
 
+install: |
+
 env:
   global:
     - DOCKERBUILDER=blockstream/gdk_rpc
@@ -12,6 +14,15 @@ env:
 
 matrix:
   include:
+    - name: nix build
+      script: |
+        (for i in {1..5}; do bash <(curl https://nixos.org/nix/install) && exit 0; done; exit 1)
+        . /home/travis/.nix-profile/etc/profile.d/nix.sh
+        nix-env -iA cachix -f https://cachix.org/api/v1/install
+        cachix use nix-bitcoin
+        nix eval nixpkgs.lib.version
+        nix-build
+
     - name: fmt checks and release build
       script:
         - docker run -v $PWD:/gdk_rpc $DOCKERBUILDER@sha256:$DOCKERHASH /bin/bash -c "cd /gdk_rpc && export GDK_LOCATION=/gdk && export GDK_TARGET=build-clang && source /root/.cargo/env && cargo fmt --all -- --check && ./build_deps.sh && cargo check --all && cargo clippy --all && cargo build --all --release"
