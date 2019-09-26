@@ -11,9 +11,10 @@
 let
   pkgs = nixpkgs.pkgs;
 
+  src-filter = (import ./tools/nix/source-filter.nix) pkgs.lib;
   gdk_rpc_crate = {
     src = if useFilterSource
-            then pkgs.nix-gitignore.gitignoreSource [] ./.
+            then builtins.filterSource src-filter ./.
             else ./.;
     type = ["staticlib"];
 
