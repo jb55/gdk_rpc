@@ -1,8 +1,8 @@
 use bitcoin::consensus::encode::{deserialize, serialize};
+use bitcoin::secp256k1;
 use bitcoin::util::{bip143, bip32};
 use bitcoin::{Network as BNetwork, PrivateKey, Transaction};
 use bitcoincore_rpc::{Client as RpcClient, RpcApi};
-use secp256k1;
 use serde_json::Value;
 
 use crate::errors::Error;
@@ -73,9 +73,10 @@ where
             //TODO(stevenroose) implement non-p2wpkh spending
             //TODO(stevenroose) make this check better after https://github.com/rust-bitcoin/rust-bitcoin/pull/255
             let is_p2wpkh = match details.address.payload {
-                bitcoin::util::address::Payload::WitnessProgram(ref prog) => {
-                    prog.program().len() == 20
-                }
+                bitcoin::util::address::Payload::WitnessProgram {
+                    ref version,
+                    ref program,
+                } => program.len() == 20,
                 _ => false,
             };
             if !is_p2wpkh {
@@ -114,10 +115,10 @@ where
             let sighash = sighash_components.sighash_all(
                 &unsigned_tx.input[idx],
                 &script_code,
-                details.amount.into_inner() as u64,
+                details.amount.as_sat(),
             );
             let msg = secp256k1::Message::from_slice(&sighash[..])?;
-            let mut signature = SECP.sign(&msg, &privkey.key).serialize_der();
+            let mut signature = SECP.sign(&msg, &privkey.key).serialize_der().as_ref().to_vec();
             signature.push(0x01);
             unsigned_tx.input[idx].witness = vec![signature, pubkey.to_bytes()];
         }

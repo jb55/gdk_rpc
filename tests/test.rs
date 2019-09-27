@@ -12,7 +12,6 @@ extern crate bitcoin;
 extern crate bitcoin_hashes;
 extern crate bitcoincore_rpc;
 extern crate rand;
-extern crate secp256k1;
 extern crate url;
 
 //extern crate gdk_rpc;
@@ -23,6 +22,7 @@ use std::os::raw::c_char;
 use std::path::Path;
 use std::{env, fs, mem, ptr, sync};
 
+use bitcoin::secp256k1;
 use bitcoin_hashes::sha256d;
 use bitcoincore_rpc::RpcApi;
 use serde_json::Value;

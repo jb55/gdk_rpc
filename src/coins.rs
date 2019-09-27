@@ -15,6 +15,7 @@ fn no_support(coin: &'static str) {
 
 #[cfg(not(feature = "liquid"))]
 pub mod liq {
+    use bitcoin::secp256k1;
     use bitcoin::util::bip32;
     use bitcoincore_rpc::Client as RpcClient;
     use serde_json::Value;

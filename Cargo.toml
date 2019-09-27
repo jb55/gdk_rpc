@@ -10,17 +10,13 @@ edition = "2018"
 crate-type = ["dylib", "staticlib"]
 
 [features]
-default = ["liquid"]
-liquid = ["elements", "liquid-rpc"]
+liquid = ["elements"]
 android_logger = ["android_log"]
 stderr_logger = ["stderrlog"]
 
 [dependencies]
-bitcoin = "0.18"
-bitcoincore-rpc = "0.7.0"
-bitcoin_hashes = { version = "0.3", features = [ "serde" ] }
-secp256k1 = { version = "0.12", features = [ "rand" ] }
-jsonrpc = "0.11"
+bitcoin = { version = "0.20", features = [ "use-serde" ] }
+bitcoin_hashes = { version = "0.7", features = [ "serde" ] }
 rand = "0.7"
 serde = "1.0"
 serde_json = "1.0"
@@ -37,13 +33,16 @@ android_log = { version = "0.1", optional = true }
 url = "1.7.2"
 backtrace = "0.3"
 
+[dependencies.jsonrpc]
+git = "https://github.com/jb55/rust-jsonrpc"
+rev = "5e4dd4817641aa2f5b9981b4ea7f3bca52e0b3d9"
+
+[dependencies.bitcoincore-rpc]
+git = "https://github.com/jb55/rust-bitcoincore-rpc"
+rev = "f9eea91f82b3812d0c82810f74edba4259ec6939"
+
 [dependencies.elements]
 version = "0.7.1"
-optional = true
-
-[dependencies.liquid-rpc]
-git = "https://github.com/stevenroose/rust-liquid-rpc.git"
-branch = "master"
 optional = true
 
 [profile.release]

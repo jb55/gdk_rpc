@@ -4,13 +4,13 @@ use std::io;
 
 use backtrace::Backtrace;
 use bitcoin::consensus::encode;
+use bitcoin::secp256k1;
 use bitcoin::util::bip32;
 use bitcoincore_rpc;
 #[cfg(feature = "liquid")]
 use elements;
 use failure;
 use hex;
-use secp256k1;
 use serde_json;
 use url;
 
