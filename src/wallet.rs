@@ -15,6 +15,7 @@ use std::str::FromStr;
 use std::time::{Duration, Instant};
 use std::{cell, fmt};
 
+use bitcoin::secp256k1;
 use bitcoin::{util::bip32, Address, Network as BNetwork};
 use bitcoin_hashes::hex::{FromHex, ToHex};
 use bitcoin_hashes::sha256d;
@@ -28,7 +29,7 @@ use crate::coins;
 use crate::constants::{SAT_PER_BIT, SAT_PER_BTC, SAT_PER_MBTC};
 use crate::errors::{Error, OptionExt};
 use crate::network::{Network, NetworkId};
-use crate::util::{btc_to_isat, btc_to_usat, extend, f64_from_val, fmt_time, SECP};
+use crate::util::{btc_to_isat, btc_to_usat, extend, f64_from_val, fmt_time, into_err, SECP};
 
 use crate::wally;
 
@@ -319,7 +320,8 @@ impl Wallet {
         // XXX does the app care about the transaction data in the event?
         if let Some(last_tx) = self._get_transactions(1, 0)?.0.get(0) {
             let txid = last_tx["txhash"].as_str().req()?;
-            let txid = sha256d::Hash::from_hex(txid)?;
+            let txid: sha256d::Hash = into_err(sha256d::Hash::from_hex(txid))?;
+
             if self.last_tx != Some(txid) {
                 self.last_tx = Some(txid);
                 msgs.push(json!({ "event": "transaction", "transaction": last_tx }));
@@ -398,8 +400,10 @@ impl Wallet {
         // fetch full transactions and convert to GDK format
         let mut txs = Vec::new();
         for desc in txdescs.into_iter() {
-            let txid = sha256d::Hash::from_hex(desc["txid"].as_str().req()?)?;
+            let txid: sha256d::Hash =
+                into_err(sha256d::Hash::from_hex(desc["txid"].as_str().req()?))?;
             let blockhash = &desc["blockhash"];
+
             let tx_hex: String = self.rpc.call(
                 "getrawtransaction",
                 &[txid.to_hex().into(), false.into(), blockhash.clone()],
@@ -411,7 +415,7 @@ impl Wallet {
     }
 
     pub fn get_transaction(&self, txid: &str) -> Result<Value, Error> {
-        let txid = sha256d::Hash::from_hex(txid)?;
+        let txid: sha256d::Hash = into_err(sha256d::Hash::from_hex(txid))?;
         let desc: Value = self.rpc.call("gettransaction", &[txid.to_hex().into(), true.into()])?;
         let raw_tx = hex::decode(desc["hex"].as_str().req()?)?;
 
@@ -611,7 +615,7 @@ impl Wallet {
 
     pub fn set_tx_memo(&self, txid: &str, memo: &str) -> Result<(), Error> {
         // we can't really set a tx memo, so we fake it by setting a memo on the address
-        let txid = sha256d::Hash::from_hex(txid)?;
+        let txid: sha256d::Hash = into_err(sha256d::Hash::from_hex(txid))?;
 
         let txdesc: Value =
             self.rpc.call("gettransaction", &[txid.to_hex().into(), true.into()])?;
@@ -691,7 +695,7 @@ fn find_memo_in_desc(txid: sha256d::Hash, txdesc: &Value) -> Result<String, Erro
 }
 
 fn format_gdk_tx(txdesc: &Value, raw_tx: &[u8], network: NetworkId) -> Result<Value, Error> {
-    let txid = sha256d::Hash::from_hex(txdesc["txid"].as_str().req()?)?;
+    let txid: sha256d::Hash = into_err(sha256d::Hash::from_hex(txdesc["txid"].as_str().req()?))?;
     //TODO(stevenroose) optimize with Amount
     let amount = match network {
         NetworkId::Elements(..) => btc_to_isat(match txdesc["amount"] {

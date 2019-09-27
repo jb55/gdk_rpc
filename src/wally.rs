@@ -4,8 +4,8 @@
 
 use std::ptr;
 
-use bitcoin::consensus::encode::serialize;
-use bitcoin_hashes::{sha256d, Hash};
+use bitcoin::secp256k1;
+use bitcoin_hashes::Hash;
 
 use crate::errors::Error;
 use crate::util::{make_str, read_str};
