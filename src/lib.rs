@@ -7,6 +7,8 @@ extern crate bitcoin_hashes;
 extern crate bitcoincore_rpc;
 extern crate chrono;
 extern crate dirs;
+extern crate hyper;
+extern crate hyper_socks;
 extern crate jsonrpc;
 extern crate libc;
 extern crate rand;

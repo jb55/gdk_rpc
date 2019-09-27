@@ -7,12 +7,16 @@ use bitcoincore_rpc::{Auth, Client};
 use url::Url;
 
 use crate::errors::{Error, OptionExt};
+use hyper::client::Client as HyperClient;
+use hyper_socks::Socks5HttpConnector;
+use jsonrpc::client::Client as RpcClient;
 
 #[derive(Debug, Serialize)]
 pub struct RpcConfig {
     pub url: String,
     pub cred: Option<(String, String)>, // (username, password)
     pub cookie: Option<String>,
+    pub socks5: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -147,6 +151,11 @@ pub enum NetworkId {
     Bitcoin(bitcoin::Network),
 }
 
+fn make_socks5_client(url: &str) -> Option<HyperClient> {
+    let connector = Socks5HttpConnector::new(url).ok();
+    connector.map(hyper::Client::with_connector)
+}
+
 impl Network {
     pub fn list() -> &'static HashMap<String, Network> {
         &NETWORKS
@@ -170,7 +179,18 @@ impl Network {
             rpc_url = rpc_url.join(&format!("/wallet/{}", wallet))?;
         }
 
-        Ok(Client::new(rpc_url.to_string(), Auth::UserPass(rpc_user, rpc_pass))?)
+        if let Some(socks5client) = rpc.socks5.and_then(make_socks5_client) {
+            let jsonrpc = RpcClient::with_client(
+                rpc_url.to_string(),
+                Some(rpc_user),
+                Some(rpc_pass),
+                socks5client,
+            );
+            Ok(Client::from_jsonrpc(jsonrpc))
+        } else {
+            Client::new(rpc_url.to_string(), Auth::UserPass(rpc_user, rpc_pass))
+                .map_err(|e| e.into())
+        }
     }
 
     pub fn id(&self) -> NetworkId {
