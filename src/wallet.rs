@@ -287,7 +287,7 @@ impl Wallet {
 
     fn _get_balance(&self, min_conf: u32) -> Result<Value, Error> {
         //TODO(stevenroose) implement in rust-bitcoincore-rpc once bitcoin::Amount lands
-        let mut args = vec![Value::Null, json!(min_conf), json!(true)];
+        let args = vec![Value::Null, json!(min_conf), json!(true)];
         #[cfg(feature = "liquid")]
         {
             if let NetworkId::Elements(net) = self.network.id() {

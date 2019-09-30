@@ -5,7 +5,6 @@
 use std::ptr;
 
 use bitcoin::secp256k1;
-use bitcoin_hashes::Hash;
 
 use crate::errors::Error;
 use crate::util::{make_str, read_str};

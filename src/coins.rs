@@ -24,7 +24,7 @@ pub mod liq {
     use crate::errors::Error;
     use crate::network::ElementsNetwork;
 
-    pub fn tx_props(raw_tx: &[u8]) -> Result<Value, Error> {
+    pub fn tx_props(_raw_tx: &[u8]) -> Result<Value, Error> {
         no_support("liquid");
         Err(Error::Other("impossible".into()))
     }
