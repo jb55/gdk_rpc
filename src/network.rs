@@ -3,15 +3,18 @@ use std::env;
 use std::fs;
 use std::path::Path;
 
+use bitcoin::network::constants::Network as NetworkType;
 use bitcoincore_rpc::{Auth, Client};
 use url::Url;
 
+use crate::bitcoincore_rpc::RpcApi;
 use crate::errors::{Error, OptionExt};
+
 use hyper::client::Client as HyperClient;
 use hyper_socks::Socks5HttpConnector;
 use jsonrpc::client::Client as RpcClient;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 pub struct RpcConfig {
     pub url: String,
     pub cred: Option<(String, String)>, // (username, password)
@@ -19,7 +22,7 @@ pub struct RpcConfig {
     pub socks5: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 pub struct Network {
     name: String,
     network: String,
@@ -58,7 +61,7 @@ lazy_static! {
             .map(|p| Path::new(&p).join(".cookie").to_string_lossy().into_owned());
 
         networks.insert(
-            "regtest-cookie".to_string(),
+            "bitcoin-regtest".to_string(),
             Network {
                 name: "Regtest".to_string(),
                 network: "regtest".to_string(),
@@ -84,7 +87,7 @@ lazy_static! {
         );
 
         networks.insert(
-            "elementsregtest-cookie".to_string(),
+            "elements-regtest".to_string(),
             Network {
                 name: "Elements Regtest".to_string(),
                 network: "elementsregtest".to_string(),
@@ -110,20 +113,20 @@ lazy_static! {
         );
 
         networks.insert(
-            "mainnet".to_string(),
+            "bitcoin-mainnet".to_string(),
             Network {
-                name: "Regtest LAN".to_string(),
+                name: "Bitcoin Mainnet".to_string(),
                 network: "mainnet".to_string(),
                 tx_explorer_url: "https://blockstream.info/tx/".to_string(),
                 address_explorer_url: "https://blockstream.info/address/".to_string(),
 
-                bech32_prefix: "tb".to_string(),
-                p2pkh_version: 111,
-                p2sh_version: 196,
+                bech32_prefix: "bc".to_string(),
+                p2pkh_version: 0,
+                p2sh_version: 5,
 
-                development: true, // TODO
+                development: false, // TODO
                 liquid: false,
-                mainnet: false,
+                mainnet: true,
 
                 default_peers: vec![],
                 service_chain_code: "".to_string(),
@@ -179,7 +182,7 @@ impl Network {
             rpc_url = rpc_url.join(&format!("/wallet/{}", wallet))?;
         }
 
-        if let Some(socks5client) = rpc.socks5.and_then(make_socks5_client) {
+        if let Some(socks5client) = rpc.socks5.as_ref().and_then(|s| make_socks5_client(&s)) {
             let jsonrpc = RpcClient::with_client(
                 rpc_url.to_string(),
                 Some(rpc_user),
@@ -202,6 +205,34 @@ impl Network {
             (l, m, d) => panic!("inconsistent network parameters: lq={}, main={}, dev={}", l, m, d),
         }
     }
+}
+
+pub fn detect_network_config(client: Client, is_elements: bool) -> Result<Network, Error> {
+    let info = client.get_blockchain_info()?;
+    // let blockhash = client.get_block_hash(0)?;
+
+    // let genesis = "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f";
+
+    let chain_type = match info.chain.as_ref() {
+        "main" => Some(NetworkType::Bitcoin),
+        "test" => Some(NetworkType::Testnet),
+        "regtest" => Some(NetworkType::Regtest),
+        _ => None,
+    }
+    .ok_or(Error::Other("unknown chain type".into()))?;
+
+    let lookup = match (chain_type, is_elements) {
+        (NetworkType::Bitcoin, false) => Some("bitcoin-mainnet"),
+        (NetworkType::Regtest, false) => Some("bitcoin-regtest"),
+        (NetworkType::Testnet, false) => Some("bitcoin-testnet"),
+        (NetworkType::Bitcoin, true) => Some("elements-mainnet"),
+        (NetworkType::Regtest, true) => Some("elements-regtest"),
+        (NetworkType::Testnet, true) => Some("elements-testnet"),
+        _ => None,
+    }
+    .ok_or(Error::Other("unknown network configuration".into()))?;
+
+    Network::get(lookup).map(|n| n.clone()).ok_or(Error::Other("unknown network config".into()))
 }
 
 fn read_cookie(path: &str) -> Result<(String, String), Error> {

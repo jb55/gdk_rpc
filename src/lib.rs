@@ -56,7 +56,7 @@ use std::sync::{Once, ONCE_INIT};
 
 use crate::constants::{GA_ERROR, GA_MEMO_USER, GA_OK};
 use crate::errors::OptionExt;
-use crate::network::Network;
+use crate::network::{Network, RpcConfig};
 use crate::session::GDKRPC_session;
 use crate::util::{extend, log_filter, make_str, read_str};
 use crate::wallet::Wallet;
@@ -199,18 +199,72 @@ pub extern "C" fn GDKRPC_destroy_session(sess: *mut GDKRPC_session) -> i32 {
     GA_OK
 }
 
+fn obj_string(val: &Value, key: &str) -> Option<String> {
+    obj_str(val, key).map(|s| s.to_string())
+}
+
+fn obj_str<'a>(val: &'a Value, key: &str) -> Option<&'a str> {
+    val.get(key).and_then(|v| v.as_str())
+}
+
+fn obj_bool(val: &Value, key: &str) -> Option<bool> {
+    val.get(key).and_then(|v| v.as_bool())
+}
+
+fn json_to_rpc_config(val: &Value) -> Option<RpcConfig> {
+    let url = obj_string(val, "uri")?;
+    let user = obj_string(val, "username")?;
+    let pass = obj_string(val, "password")?;
+    let msocks5 = obj_string(val, "socks5");
+    Some(RpcConfig {
+        url: url,
+        cred: Some((user, pass)),
+        socks5: msocks5,
+        cookie: None,
+    })
+}
+
 #[no_mangle]
 pub extern "C" fn GDKRPC_connect(
     sess: *mut GDKRPC_session,
-    network_name: *const c_char,
+    net_params: *const GDKRPC_json,
     log_level: u32,
 ) -> i32 {
     let sess = safe_mut_ref!(sess);
 
     log::set_max_level(log_filter(log_level));
 
-    let network_name = read_str(network_name);
-    sess.network = Some(tryit!(Network::get(&network_name).or_err("missing network")));
+    let net_params = &safe_ref!(net_params).0;
+    let rpcjson = net_params.get("rpc");
+    let mwallet = obj_str(net_params, "wallet");
+
+    let mrpc = rpcjson.and_then(json_to_rpc_config);
+
+    if mrpc.is_none() {
+        println!("Couldn't parse rpc json in GDKRPC_connect: {:#?}", rpcjson);
+        return GA_ERROR;
+    }
+    let rpc = mrpc.unwrap();
+
+    println!("Connecting to {} socks5({:#?})", rpc.url, rpc.socks5);
+    let mclient = Network::connect(&rpc, mwallet);
+
+    if let Err(msg) = mclient {
+        println!("Error connecting to rpc: {}", msg);
+        return GA_ERROR;
+    }
+
+    let client = mclient.unwrap();
+
+    let is_elements = obj_bool(net_params, "elements").unwrap_or(false);
+    let mnetwork = network::detect_network_config(client, is_elements);
+    if let Err(msg) = mnetwork {
+        println!("Error detecting networking: {}", msg);
+        return GA_ERROR;
+    }
+    sess.network = mnetwork.ok();
+
+    println!("Network: {:#?}", sess.network);
 
     debug!("GA_connect() {:?}", sess);
 
@@ -240,7 +294,7 @@ pub extern "C" fn GDKRPC_register_user(
     let mnemonic = read_str(mnemonic);
 
     debug!("GA_register_user({:?}) {:?}", mnemonic, sess);
-    let network = tryit!(sess.network.or_err("session not connected"));
+    tryit!(sess.network.as_ref().or_err("session not connected"));
     // sess.wallet = Some(tryit!(Wallet::register(network, &mnemonic)));
 
     ok!(ret, GA_auth_handler::success())
@@ -273,11 +327,11 @@ pub extern "C" fn GDKRPC_login(
         }
     } else {
         debug!("GA_login({}) {:?}", mnemonic, sess);
-        let network = tryit!(sess.network.or_err("session not connected"));
+        let network = tryit!(sess.network.as_ref().or_err("session not connected"));
         // sess.wallet = Some(tryit!(Wallet::login(network, &mnemonic)));
     }
 
-    tryit!(sess.hello());
+    // tryit!(sess.hello());
 
     ok!(ret, GA_auth_handler::success())
 }
@@ -749,10 +803,10 @@ pub extern "C" fn GDKRPC_login_with_pin(
 
     debug!("GA_login_with_pin mnemonic: {}", mnemonic);
     let sess = safe_mut_ref!(sess);
-    let network = tryit!(sess.network.or_err("session not connected"));
+    let network = tryit!(sess.network.as_ref().or_err("session not connected"));
     // sess.wallet = Some(tryit!(Wallet::login(network, &mnemonic)));
 
-    tryit!(sess.hello());
+    // tryit!(sess.hello());
 
     GA_OK
 }

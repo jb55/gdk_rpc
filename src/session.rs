@@ -12,7 +12,7 @@ use crate::GDKRPC_json;
 #[repr(C)]
 pub struct GDKRPC_session {
     pub settings: Settings,
-    pub network: Option<&'static Network>,
+    pub network: Option<Network>,
     pub wallet: Option<Wallet>,
     pub notify:
         Option<(extern "C" fn(*const libc::c_void, *const GDKRPC_json), *const libc::c_void)>,
