@@ -40,7 +40,7 @@ extern "C" {
 #define GA_FALSE 0
 
 /** A server session */
-struct GDKRPC_session;
+typedef struct GDKRPC_session GDKRPC_session;
 
 /** A Parsed JSON object */
 typedef struct GDKRPC_json GDKRPC_json;
