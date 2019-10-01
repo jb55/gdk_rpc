@@ -14,7 +14,9 @@ fmt: fake
 
 check-src: fmt clippy
 
-check: tests/c-test check-src
+check-all: tests/c-test check-src
+
+check: tests/c-test
 	./tests/c-test
 
 .PHONY: fake
