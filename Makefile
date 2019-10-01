@@ -1,9 +1,12 @@
 
-target/release/libgdk_rpc.a:
+target/debug/libgdk_rpc.a: fake
+	cargo build --features stderr_logger --all
+
+target/release/libgdk_rpc.a: fake
 	cargo build --release
 
-tests/c-test: tests/test.c target/release/libgdk_rpc.a
-	$(CC) $< -L. -I. -ldl -lm -l:target/release/libgdk_rpc.a -lpthread  -l:bld/lib/libwallycore.a -o  $@
+tests/c-test: tests/test.c target/debug/libgdk_rpc.a
+	$(CC) $< -L. -I. -ldl -lm -l:target/debug/libgdk_rpc.a -lpthread  -l:bld/lib/libwallycore.a -o  $@
 
 
 clippy: fake
@@ -18,5 +21,9 @@ check-all: tests/c-test check-src
 
 check: tests/c-test
 	./tests/c-test
+
+clean: fake
+	cargo clean
+	rm -f tests/c-test
 
 .PHONY: fake
