@@ -19,7 +19,6 @@ pub struct RpcConfig {
 pub struct Network {
     name: String,
     network: String,
-    rpc: RpcConfig,
 
     bech32_prefix: String,
     p2pkh_version: u32,
@@ -59,11 +58,6 @@ lazy_static! {
             Network {
                 name: "Regtest".to_string(),
                 network: "regtest".to_string(),
-                rpc: RpcConfig {
-                    url: rpc_url.clone(),
-                    cred: None,
-                    cookie: rpc_cookie.clone(),
-                },
                 tx_explorer_url: "https://blockstream.info/tx/".to_string(),
                 address_explorer_url: "https://blockstream.info/address/".to_string(),
 
@@ -90,11 +84,6 @@ lazy_static! {
             Network {
                 name: "Elements Regtest".to_string(),
                 network: "elementsregtest".to_string(),
-                rpc: RpcConfig {
-                    url: rpc_url,
-                    cred: None,
-                    cookie: rpc_cookie,
-                },
                 tx_explorer_url: "https://blockstream.info/tx/".to_string(),
                 address_explorer_url: "https://blockstream.info/address/".to_string(),
 
@@ -121,14 +110,6 @@ lazy_static! {
             Network {
                 name: "Regtest LAN".to_string(),
                 network: "mainnet".to_string(),
-                rpc: RpcConfig {
-                    url: "http://192.168.2.108:18443".to_string(),
-                    cred: Some((
-                        "satoshi".to_string(),
-                        "02hMwUvA8iu9DFsboCB3JaE7Wc8Oix4XdBA2fjhYzy4=".to_string(),
-                    )),
-                    cookie: None,
-                },
                 tx_explorer_url: "https://blockstream.info/tx/".to_string(),
                 address_explorer_url: "https://blockstream.info/address/".to_string(),
 
@@ -175,11 +156,7 @@ impl Network {
         NETWORKS.get(id)
     }
 
-    pub fn connect(&self, wallet: Option<&str>) -> Result<Client, Error> {
-        Network::connect_with(&self.rpc, wallet)
-    }
-
-    pub fn connect_with(rpc: &RpcConfig, wallet: Option<&str>) -> Result<Client, Error> {
+    pub fn connect(rpc: &RpcConfig, wallet: Option<&str>) -> Result<Client, Error> {
         let cred = rpc
             .cred
             .clone()

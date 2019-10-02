@@ -239,7 +239,7 @@ pub extern "C" fn GDKRPC_register_user(
 
     debug!("GA_register_user({:?}) {:?}", mnemonic, sess);
     let network = tryit!(sess.network.or_err("session not connected"));
-    sess.wallet = Some(tryit!(Wallet::register(network, &mnemonic)));
+    // sess.wallet = Some(tryit!(Wallet::register(network, &mnemonic)));
 
     ok!(ret, GA_auth_handler::success())
 }
@@ -272,7 +272,7 @@ pub extern "C" fn GDKRPC_login(
     } else {
         debug!("GA_login({}) {:?}", mnemonic, sess);
         let network = tryit!(sess.network.or_err("session not connected"));
-        sess.wallet = Some(tryit!(Wallet::login(network, &mnemonic)));
+        // sess.wallet = Some(tryit!(Wallet::login(network, &mnemonic)));
     }
 
     tryit!(sess.hello());
@@ -748,7 +748,7 @@ pub extern "C" fn GDKRPC_login_with_pin(
     debug!("GA_login_with_pin mnemonic: {}", mnemonic);
     let sess = safe_mut_ref!(sess);
     let network = tryit!(sess.network.or_err("session not connected"));
-    sess.wallet = Some(tryit!(Wallet::login(network, &mnemonic)));
+    // sess.wallet = Some(tryit!(Wallet::login(network, &mnemonic)));
 
     tryit!(sess.hello());
 
